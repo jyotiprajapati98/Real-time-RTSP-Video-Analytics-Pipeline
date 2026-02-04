@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RTSP Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f0f2f5; }
+        .container { display: flex; gap: 20px; }
+        .video-box { flex: 2; background: black; border-radius: 8px; overflow: hidden; }
+        .detection-list { flex: 1; background: white; padding: 15px; border-radius: 8px; height: 80vh; overflow-y: auto; }
+        video { width: 100%; aspect-ratio: 16/9; }
+        .det-item { border-bottom: 1px solid #eee; padding: 10px 0; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .det-item:hover { background: #f9f9f9; }
+        .det-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+        .det-info div { margin-bottom: 4px; }
+        .badge { background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <h1>Live Analytics Stream</h1>
+    
+    <div class="container">
+        <div class="video-box">
+            <video id="video" controls autoplay muted></video>
+        </div>
+        
+        <div class="detection-list" id="detList">
+            <h3>Recent Detections</h3>
+            <div id="loader">Loading...</div>
+        </div>
+    </div>
+
+    <script>
+        // HLS Player Setup
+        var video = document.getElementById('video');
+        var videoSrc = '/hls/stream.m3u8';
+        if (Hls.isSupported()) {
+            var hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = videoSrc;
+        }
+
+        // Poll Detections
+        function updateDetections() {
+            fetch('/detections')
+                .then(response => response.json())
+                .then(data => {
+                    const list = document.getElementById('detList');
+                    list.innerHTML = '<h3>Recent Detections</h3>';
+                    data.forEach(det => {
+                        // Fix frame path to match web mount
+                        // C++ saves "detected_frames/foo.jpg", web shows "/images/foo.jpg"
+                        let imgUrl = det.frame_path.replace('detected_frames/', '/images/');
+                        
+                        let item = document.createElement('div');
+                        item.className = 'det-item';
+                        item.innerHTML = `
+                            <img src="${imgUrl}" class="det-thumb" onclick="window.open('${imgUrl}')">
+                            <div class="det-info">
+                                <div><strong>${det.class_name}</strong> <span class="badge">${(det.confidence*100).toFixed(0)}%</span></div>
+                                <div style="color: #666; font-size: 0.9em">${det.timestamp}</div>
+                                <div style="color: #888; font-size: 0.8em">${det.device_name}</div>
+                            </div>
+                        `;
+                        list.appendChild(item);
+                    });
+                })
+                .catch(err => console.error(err));
+        }
+
+        setInterval(updateDetections, 2000); // Poll every 2 seconds
+        updateDetections();
+    </script>
+</body>
+</html>

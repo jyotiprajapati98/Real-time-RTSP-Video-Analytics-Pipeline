@@ -1,0 +1,3 @@
+/home/mantra/Analytics_Pipeline/build/CMakeFiles/rtsp_pipeline.dir
+/home/mantra/Analytics_Pipeline/build/CMakeFiles/edit_cache.dir
+/home/mantra/Analytics_Pipeline/build/CMakeFiles/rebuild_cache.dir
